@@ -52,8 +52,8 @@ export default class commentBox extends Component {
 
     const identifier = window.disqusProxy.identifier
     const query = 'identifier=' + encodeURIComponent(identifier)
-    const url = '//' + window.disqusProxy.server + ':'
-      + window.disqusProxy.port.toString() + '/api/getThreads'
+    const port = window.disqusProxy.port ? `:${window.disqusProxy.port.toString()}` : ''
+    const url = '//' + window.disqusProxy.server + port + '/api/getThreads'
     const result = await fetch(url + '?' + query)
     const res = await result.json()
 
