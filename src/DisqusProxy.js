@@ -20,8 +20,8 @@ export default class DisqusProxy extends Component {
     // 用文字标识符获取评论
     const identifier = window.disqusProxy.identifier
     const query = 'identifier=' + encodeURIComponent(identifier)
-    const url = '//' + window.disqusProxy.server + ':'
-      + window.disqusProxy.port.toString() + '/api/getComments'
+    const port = window.disqusProxy.port ? `:${window.disqusProxy.port.toString()}` : ''
+    const url = '//' + window.disqusProxy.server + port + '/api/getComments'
     try {
       const result = await fetch(url + '?' + query)
       const res = await result.json()
