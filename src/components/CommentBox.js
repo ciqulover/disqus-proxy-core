@@ -45,10 +45,14 @@ export default class commentBox extends Component {
       notificationTitle: '',
       notificationBody: '',
       showNotification: false,
+      show: !props.replyTo,
+      total: null,
+      loading: false
     }
   }
 
   async componentWillMount() {
+    this.setState({loading: true})
 
     const identifier = window.disqusProxy.identifier
     const query = 'identifier=' + encodeURIComponent(identifier)
@@ -56,10 +60,12 @@ export default class commentBox extends Component {
       + window.disqusProxy.port.toString() + '/api/getThreads'
     const result = await fetch(url + '?' + query)
     const res = await result.json()
+    this.setState({loading: false})
 
     if (res.code === 0 && res.response.length) {
       const thread = res.response[0].id
-      this.setState({thread})
+      const total = res.response[0].posts
+      this.setState({thread, total})
       const message = localStorage.getItem(thread)
       if (typeof message === 'string') this.setState({message})
 
@@ -70,6 +76,11 @@ export default class commentBox extends Component {
         showNotification: true
       })
     }
+  }
+
+  componentDidMount() {
+    const {replyTo} = this.props
+    if (replyTo) setTimeout(() => this.setState({show: true}), 0)
   }
 
   handleChange = (e, key) => {
@@ -119,6 +130,9 @@ export default class commentBox extends Component {
       author_email: this.state.authorEmail,
       message: this.state.message
     }
+
+    if (this.props.replyTo) payload.parent = this.props.replyTo
+
     const url = '//' + window.disqusProxy.server + ':'
       + window.disqusProxy.port.toString() + '/api/createComment'
 
@@ -169,6 +183,9 @@ export default class commentBox extends Component {
   }
 
   render() {
+    const {replyTo} = this.props
+    const {show, total} = this.state
+
     return (
       <div style={{
         padding: '10px 20px',
@@ -176,47 +193,49 @@ export default class commentBox extends Component {
         overflow: 'hidden'
       }}>
         <div style={{
-          height: '110px',
+          height: show ? '110px' : 0,
+          transition: 'all 0.5s',
+          overflow: 'hidden',
           position: 'relative'
         }}>
-          <div style={{
+          {!replyTo && <div style={{
             position: 'absolute',
             paddingTop: '6px'
-          }}>
-            <img src={blockies.create({
-              seed: 'newuser',
-              color: 'yellow',
-              bgcolor: 'green',
-              spotcolor: 'red'
-            }).toDataURL()} alt="avatar" style={{
-              width: '50px',
-              height: '50px',
-              borderRadius: '50%',
-              boxShadow: '1px 1px 3px 0.5px #ccc'
-            }}/>
-          </div>
-          <textarea value={this.state.message}
-                    style={{
-                      position: 'absolute',
-                      top: '0',
-                      left: '70px',
-                      width: 'calc(100% - 70px)',
-                      height: '100px',
-                      boxSizing: 'border-box',
-                      fontSize: '16px',
-                      letterSpacing: '0.7px',
-                      padding: '12px',
-                      color: '#555',
-                      backgroundColor: '#f8f8f8',
-                      outline: 'none',
-                      border: this.state.messageValid ? 'none' : 'border: 1px solid #ff7500',
-                      resize: 'none',
-                      borderRadius: '8px',
-                      overflow: 'auto',
-                      boxShadow: '1px 1px 2px -1px #aaa',
-                    }}
-                    disabled={this.state.disabled}
-                    onChange={e => this.handleChange(e, 'message')}/>
+          }}><img src={blockies.create({
+            seed: 'newuser',
+            color: 'yellow',
+            bgcolor: 'green',
+            spotcolor: 'red'
+          }).toDataURL()} alt="avatar" style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            boxShadow: '1px 1px 3px 0.5px #ccc'
+          }}/>
+          </div>}
+          <textarea
+            value={this.state.message}
+            style={{
+              position: 'absolute',
+              top: '0',
+              left: replyTo ? 0 : '70px',
+              width: replyTo ? '100%' : 'calc(100% - 70px)',
+              height: '100px',
+              boxSizing: 'border-box',
+              fontSize: '16px',
+              letterSpacing: '0.7px',
+              padding: '12px',
+              color: '#555',
+              backgroundColor: '#f8f8f8',
+              outline: 'none',
+              border: this.state.messageValid ? 'none' : 'border: 1px solid #ff7500',
+              resize: 'none',
+              borderRadius: '8px',
+              overflow: 'auto',
+              boxShadow: '1px 1px 2px -1px #aaa',
+            }}
+            disabled={this.state.disabled}
+            onChange={e => this.handleChange(e, 'message')}/>
         </div>
         {this.state.showNotification && (
           <Notification title={this.state.notificationTitle}
@@ -280,6 +299,8 @@ export default class commentBox extends Component {
             <i className="fa fa-share" aria-hidden="true"/>
           </button>
         </div>
+        {!replyTo && <div style={{fontSize: 15, marginLeft: 70, color: '#888'}}>
+          {typeof total === 'number' ? total : '? '}条评论</div>}
       </div>
     )
   }

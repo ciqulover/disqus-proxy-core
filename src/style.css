@@ -52,3 +52,7 @@
     width: calc(100% - 60px);
   }
 }
+
+.comment-body p {
+  margin-bottom: 0;
+}

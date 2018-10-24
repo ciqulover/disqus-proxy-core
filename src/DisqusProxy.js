@@ -12,21 +12,71 @@ export default class DisqusProxy extends Component {
       notificationTitle: '',
       notificationBody: '',
       showNotification: false,
+      cursor: null,
+      more: false,
+      loading: false
     }
   }
 
-  async componentWillMount() {
+  componentDidMount() {
+    this.checkMore()
+  }
 
-    // 用文字标识符获取评论
+  checkMore = () => {
+    function getScrollTop() {
+      let scrollTop = 0
+      if (document.documentElement && document.documentElement.scrollTop) {
+        scrollTop = document.documentElement.scrollTop
+      }
+      else if (document.body) {
+        scrollTop = document.body.scrollTop
+      }
+      return scrollTop
+    }
+
+    function getClientHeight() {
+      let clientHeight = 0
+      if (document.body.clientHeight && document.documentElement.clientHeight) {
+        clientHeight = Math.min(document.body.clientHeight, document.documentElement.clientHeight)
+      }
+      else {
+        clientHeight = Math.max(document.body.clientHeight, document.documentElement.clientHeight)
+      }
+      return clientHeight
+    }
+
+    function getScrollHeight() {
+      return Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)
+    }
+
+    window.onscroll = () => {
+      if (getScrollHeight() - getScrollTop() - getClientHeight() < 140) this.loadMore()
+    }
+  }
+
+  loadMore = async () => {
+    const {loading, more} = this.state
+    if (!more || loading) return
+    await this.getComments()
+  }
+
+  getComments = async () => {
+    const {cursor, comments} = this.state
     const identifier = window.disqusProxy.identifier
-    const query = 'identifier=' + encodeURIComponent(identifier)
+    let query = 'identifier=' + encodeURIComponent(identifier)
+    if (cursor) query += '&cursor=' + encodeURIComponent(cursor)
     const url = '//' + window.disqusProxy.server + ':'
       + window.disqusProxy.port.toString() + '/api/getComments'
+    this.setState({loading: true})
     try {
       const result = await fetch(url + '?' + query)
       const res = await result.json()
       this.setState({isFetchingComment: false})
-      if (res.code === 0) this.setState({comments: res.response})
+      if (res.code === 0) {
+        const {cursor, response} = res
+        const {more, next} = cursor
+        this.setState({more, cursor: next, comments: comments.concat(response)})
+      }
       // 错误码 2 是找不到文章的thread，一般为未有评论，故此处忽略之
       else if (res.code !== 2) this.setState({
         notificationTitle: '评论获取错误',
@@ -41,6 +91,11 @@ export default class DisqusProxy extends Component {
         showNotification: true
       })
     }
+    this.setState({loading: false})
+  }
+
+  async componentWillMount() {
+    await this.getComments()
   }
 
   render() {
