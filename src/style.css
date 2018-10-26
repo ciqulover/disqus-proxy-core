@@ -53,6 +53,6 @@
   }
 }
 
-.comment-body p {
+#disqus_proxy_thread .comment-body p {
   margin-bottom: 0;
 }
