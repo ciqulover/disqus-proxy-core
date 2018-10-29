@@ -66,6 +66,13 @@ export default class commentBox extends Component {
       const thread = res.response[0].id
       const total = res.response[0].posts
       this.setState({thread, total})
+
+      // 反代显示评论数 See https://help.disqus.com/developer/adding-comment-count-links-to-your-home-page
+      const links = document.getElementsByTagName('a')
+      for (const link of links) {
+        if (/#disqus_thread$/.test(link.href)) link.textContent = `${total} 条评论`
+      }
+
       const message = localStorage.getItem(thread)
       if (typeof message === 'string') this.setState({message})
 
